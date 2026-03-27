@@ -25,6 +25,13 @@ Open `index.html` in a browser. No build step, no dependencies, no server requir
 3. Use the split slider or switch to side-by-side view
 4. Scroll to zoom, drag to pan, use keyboard shortcuts for playback
 
+## Example
+
+The `Example/` folder contains two sample videos for testing:
+
+- `running_horse-A.mp4` — Video A (left)
+- `running_horse-B.mp4` — Video B (right)
+
 ## Architecture
 
 Single-file app — HTML, CSS, and JavaScript are all inline in `index.html`.
