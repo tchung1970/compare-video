@@ -33,4 +33,4 @@ Four `<video>` elements are used: `vidA`/`vidB` for split mode and `vidA2`/`vidB
 
 ## License
 
-MIT
+This project is open source and available under the [MIT LICENSE](LICENSE).
