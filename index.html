@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compare Video</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1d2e; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: rgba(26,29,46,0.95); backdrop-filter: blur(12px); z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.logo { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; color: rgba(255,255,255,0.9); }
+.view-toggle { display: flex; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 3px; gap: 2px; }
+.view-toggle button { background: none; border: none; color: rgba(255,255,255,0.4); padding: 7px 18px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; border-radius: 8px; }
+.view-toggle button.active { background: rgba(120,140,255,0.15); color: rgba(255,255,255,0.9); }
+.view-toggle button:hover { color: rgba(255,255,255,0.8); }
+.header-right { display: flex; gap: 8px; align-items: center; }
+.zoom-badge { background: rgba(120,140,255,0.2); color: rgba(255,255,255,0.85); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(120,140,255,0.15); transition: all 0.2s; }
+.zoom-badge:hover { background: rgba(120,140,255,0.3); }
+.reset-btn { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s; }
+.reset-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.back-btn { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s; }
+.back-btn:hover { background: rgba(220,50,50,0.2); color: #f66; border-color: rgba(220,50,50,0.2); }
+
+/* Upload Screen */
+.upload-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px; }
+.upload-screen h2 { font-size: 42px; font-weight: 700; color: rgba(255,255,255,0.9); letter-spacing: -0.5px; }
+.upload-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 20px; padding: 24px; display: flex; gap: 20px; }
+.upload-row { display: flex; gap: 20px; }
+.upload-box { width: 250px; height: 400px; border: 2px dashed rgba(255,255,255,0.12); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; background: rgba(255,255,255,0.03); }
+.upload-box:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+.upload-box.dragover { border-color: rgba(120,140,255,0.5); background: rgba(120,140,255,0.08); }
+.upload-box.has-file { border-color: rgba(120,140,255,0.4); border-style: solid; }
+.upload-box svg { display: none; }
+.upload-box .upload-icon { font-size: 52px; margin-bottom: 16px; }
+.upload-box .label { color: rgba(255,255,255,0.7); font-size: 16px; font-weight: 500; }
+.upload-box .sublabel { color: rgba(255,255,255,0.4); font-size: 14px; margin-top: 8px; }
+.upload-box .filename { color: rgba(120,140,255,0.8); font-size: 12px; margin-top: 8px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.upload-box input { display: none; }
+.upload-box video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.upload-box .overlay-label { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); padding: 5px 14px; border-radius: 8px; font-size: 12px; color: rgba(255,255,255,0.9); font-weight: 500; }
+.btn-row { display: flex; gap: 12px; }
+.compare-btn { padding: 14px 40px; background: rgba(120,140,255,0.2); color: rgba(255,255,255,0.9); border: 1px solid rgba(120,140,255,0.25); border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.compare-btn:hover { background: rgba(120,140,255,0.3); color: #fff; }
+.compare-btn:disabled { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.05); cursor: not-allowed; }
+.footer-link { color: rgba(255,255,255,0.55); font-size: 16px; text-decoration: none; transition: color 0.2s; }
+.footer-link:hover { color: rgba(255,255,255,0.8); }
+.footer-link span { color: rgba(120,140,255,0.85); }
+.footer-link:hover span { color: rgba(120,140,255,1); }
+
+/* Compare View */
+.compare-container { flex: 1; position: relative; overflow: hidden; display: none; background: #0f1119; cursor: grab; }
+.compare-container.active-drag { cursor: grabbing; }
+.video-wrapper { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.video-inner { position: relative; width: 100%; height: 100%; }
+.compare-container video { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; max-height: 100%; }
+.compare-container.zoomed video { max-width: none; max-height: none; }
+
+/* Split slider */
+.split-clip { position: absolute; inset: 0; overflow: hidden; }
+.slider-line { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.8); z-index: 5; cursor: ew-resize; pointer-events: none; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+.slider-handle { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.9); background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 6; cursor: ew-resize; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 12px rgba(0,0,0,0.4); transition: transform 0.15s; }
+.slider-handle:hover { transform: translate(-50%, -50%) scale(1.1); }
+.slider-handle::before, .slider-handle::after { content: ''; display: block; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; position: absolute; }
+.slider-handle::before { border-right: 5px solid #fff; left: 5px; }
+.slider-handle::after { border-left: 5px solid #fff; right: 5px; }
+
+/* Side by side mode */
+.side-by-side { display: none; flex: 1; background: #0f1119; min-height: 0; overflow: hidden; align-items: center; justify-content: center; }
+.side-by-side .panel { display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; height: 100%; }
+.side-by-side .panel video { height: 100%; transition: none; }
+.side-by-side .divider { width: 2px; background: rgba(255,255,255,0.1); align-self: stretch; }
+
+/* Labels */
+.video-label { position: absolute; bottom: 12px; padding: 5px 14px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); border-radius: 8px; font-size: 12px; font-weight: 500; z-index: 7; pointer-events: none; color: rgba(255,255,255,0.85); }
+.video-label.left { left: 12px; }
+.video-label.right { right: 12px; }
+
+/* Controls */
+.controls { display: none; background: rgba(26,29,46,0.95); backdrop-filter: blur(12px); padding: 10px 20px 14px; z-index: 10; border-top: 1px solid rgba(255,255,255,0.06); }
+.timeline { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; cursor: pointer; margin-bottom: 10px; position: relative; transition: height 0.15s; }
+.timeline:hover { height: 6px; }
+.timeline-progress { height: 100%; background: linear-gradient(90deg, rgba(120,140,255,0.6), rgba(120,140,255,0.9)); border-radius: 4px; width: 0; pointer-events: none; }
+.controls-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.ctrl-btn { background: rgba(255,255,255,0.06); border: none; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 20px; padding: 6px 10px; display: flex; align-items: center; border-radius: 8px; transition: all 0.2s; }
+.ctrl-btn:hover { background: rgba(120,140,255,0.15); color: #fff; }
+.time-display { font-size: 13px; color: rgba(255,255,255,0.4); font-variant-numeric: tabular-nums; font-weight: 500; }
+.info-bar { display: flex; justify-content: space-between; padding: 6px 20px; background: rgba(26,29,46,0.95); backdrop-filter: blur(12px); }
+.info-tag { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.45); padding: 4px 12px; border-radius: 8px; font-size: 11px; font-weight: 500; letter-spacing: 0.3px; }
+</style>
+</head>
+<body>
+
+<!-- Upload Screen -->
+<div class="upload-screen" id="uploadScreen">
+  <h2>Compare Two Videos</h2>
+  <div class="upload-card">
+    <div class="upload-box" id="uploadA" onclick="document.getElementById('fileA').click()">
+      <span class="upload-icon">&#127916;</span>
+      <span class="label">Drop video here or click</span>
+      <span class="sublabel">Video A (Left)</span>
+      <span class="filename" id="nameA"></span>
+      <input type="file" id="fileA" accept="video/*">
+    </div>
+    <div class="upload-box" id="uploadB" onclick="document.getElementById('fileB').click()">
+      <span class="upload-icon">&#127916;</span>
+      <span class="label">Drop video here or click</span>
+      <span class="sublabel">Video B (Right)</span>
+      <span class="filename" id="nameB"></span>
+      <input type="file" id="fileB" accept="video/*">
+    </div>
+  </div>
+  <div class="btn-row">
+    <button class="compare-btn" id="compareBtn" disabled>Compare</button>
+    <button class="compare-btn" id="uploadResetBtn" disabled>Reset</button>
+  </div>
+  <a href="https://www.anthropic.com/news/claude-opus-4-6" target="_blank" class="footer-link">Written in <span>Claude Opus 4.6</span></a>
+</div>
+
+<!-- Header (shown in compare mode) -->
+<div class="header" id="header" style="display:none;">
+  <div class="logo">Compare Video</div>
+  <div class="view-toggle">
+    <button id="splitBtn" class="active" title="Split View">Split View</button>
+    <button id="sideBtn" title="Side by Side">Side by Side</button>
+  </div>
+  <div class="header-right">
+    <button class="zoom-badge" id="zoomBadge">100%</button>
+    <button class="reset-btn" id="resetBtn">Reset</button>
+    <button class="back-btn" id="backBtn" title="Back to upload">Close</button>
+  </div>
+</div>
+<div class="info-bar" id="infoBar" style="display:none;">
+  <span class="info-tag" id="infoTagA"></span>
+  <span class="info-tag" id="infoTagB"></span>
+</div>
+
+<!-- Split Compare View -->
+<div class="compare-container" id="compareView">
+  <div class="video-wrapper" id="videoWrapper">
+    <div class="video-inner" id="videoInner">
+      <!-- Video B (right / underneath in split) -->
+      <video id="vidB" muted playsinline></video>
+      <!-- Video A (left, clipped) -->
+      <div class="split-clip" id="splitClip">
+        <video id="vidA" muted playsinline></video>
+      </div>
+    </div>
+  </div>
+  <div class="slider-line" id="sliderLine"></div>
+  <div class="slider-handle" id="sliderHandle"></div>
+  <span class="video-label left" id="labelA"></span>
+  <span class="video-label right" id="labelB"></span>
+</div>
+
+<!-- Side by Side View -->
+<div class="side-by-side" id="sideBySide">
+  <div class="panel"><video id="vidA2" muted playsinline></video></div>
+  <div class="divider"></div>
+  <div class="panel"><video id="vidB2" muted playsinline></video></div>
+</div>
+
+<!-- Controls -->
+<div class="controls" id="controls">
+  <div class="timeline" id="timeline">
+    <div class="timeline-progress" id="timelineProgress"></div>
+  </div>
+  <div class="controls-row" style="justify-content:center;">
+    <button class="ctrl-btn" id="playPauseBtn" title="Play/Pause" style="font-size:24px;">&#9654;&#65039;</button>
+    <span class="time-display" id="timeDisplay">00:00 / 00:00</span>
+  </div>
+</div>
+
+<script>
+const fileA = document.getElementById('fileA');
+const fileB = document.getElementById('fileB');
+const uploadA = document.getElementById('uploadA');
+const uploadB = document.getElementById('uploadB');
+const nameA = document.getElementById('nameA');
+const nameB = document.getElementById('nameB');
+const compareBtn = document.getElementById('compareBtn');
+const uploadScreen = document.getElementById('uploadScreen');
+const header = document.getElementById('header');
+const compareView = document.getElementById('compareView');
+const sideBySide = document.getElementById('sideBySide');
+const controls = document.getElementById('controls');
+const vidA = document.getElementById('vidA');
+const vidB = document.getElementById('vidB');
+const vidA2 = document.getElementById('vidA2');
+const vidB2 = document.getElementById('vidB2');
+const splitClip = document.getElementById('splitClip');
+const sliderLine = document.getElementById('sliderLine');
+const sliderHandle = document.getElementById('sliderHandle');
+const timeline = document.getElementById('timeline');
+const timelineProgress = document.getElementById('timelineProgress');
+const playPauseBtn = document.getElementById('playPauseBtn');
+const timeDisplay = document.getElementById('timeDisplay');
+const splitBtn = document.getElementById('splitBtn');
+const sideBtn = document.getElementById('sideBtn');
+const zoomBadge = document.getElementById('zoomBadge');
+const resetBtn = document.getElementById('resetBtn');
+const backBtn = document.getElementById('backBtn');
+const labelA = document.getElementById('labelA');
+const labelB = document.getElementById('labelB');
+const infoTags = document.getElementById('infoTags');
+const videoInner = document.getElementById('videoInner');
+const infoBar = document.getElementById('infoBar');
+const infoTagA = document.getElementById('infoTagA');
+const infoTagB = document.getElementById('infoTagB');
+
+let fileAObj = null, fileBObj = null;
+let sliderPos = 0.5;
+let mode = 'split'; // 'split' or 'side'
+let playing = false;
+let draggingSlider = false;
+let zoom = 1;
+let panX = 0, panY = 0;
+let isPanning = false, panStartX, panStartY, panStartPanX, panStartPanY;
+
+// Upload handling
+function showThumbnail(box, file) {
+  let thumb = box.querySelector('video.thumb');
+  if (!thumb) {
+    thumb = document.createElement('video');
+    thumb.className = 'thumb';
+    thumb.muted = true;
+    thumb.playsInline = true;
+    box.appendChild(thumb);
+    const lbl = document.createElement('span');
+    lbl.className = 'overlay-label';
+    box.appendChild(lbl);
+  }
+  thumb.src = URL.createObjectURL(file);
+  thumb.currentTime = 0.5;
+  box.querySelector('.overlay-label').textContent = file.name;
+  const ic = box.querySelector('.upload-icon'); if (ic) ic.style.display = 'none';
+  box.querySelector('.label').style.display = 'none';
+  box.querySelector('.filename').style.display = 'none';
+}
+
+function handleFileA(file) {
+  if (file && file.type.startsWith('video/')) {
+    fileAObj = file;
+    nameA.textContent = file.name;
+    uploadA.classList.add('has-file');
+    showThumbnail(uploadA, file);
+    checkReady();
+  }
+}
+function handleFileB(file) {
+  if (file && file.type.startsWith('video/')) {
+    fileBObj = file;
+    nameB.textContent = file.name;
+    uploadB.classList.add('has-file');
+    showThumbnail(uploadB, file);
+    checkReady();
+  }
+}
+
+fileA.addEventListener('change', () => handleFileA(fileA.files[0]));
+fileB.addEventListener('change', () => handleFileB(fileB.files[0]));
+
+// Drag and drop
+function setupDrop(box, handler) {
+  box.addEventListener('dragover', (e) => { e.preventDefault(); box.classList.add('dragover'); });
+  box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+  box.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    box.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handler(file);
+  });
+}
+setupDrop(uploadA, handleFileA);
+setupDrop(uploadB, handleFileB);
+
+// Also support dropping anywhere on the upload screen (auto-fills A then B)
+uploadScreen.addEventListener('dragover', (e) => e.preventDefault());
+uploadScreen.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const files = [...e.dataTransfer.files].filter(f => f.type.startsWith('video/'));
+  if (files.length >= 1 && !fileAObj) handleFileA(files[0]);
+  else if (files.length >= 1 && fileAObj && !fileBObj) handleFileB(files[0]);
+  if (files.length >= 2) { handleFileA(files[0]); handleFileB(files[1]); }
+});
+
+const uploadResetBtn = document.getElementById('uploadResetBtn');
+
+function checkReady() {
+  compareBtn.disabled = !(fileAObj && fileBObj);
+  uploadResetBtn.disabled = !(fileAObj || fileBObj);
+}
+
+uploadResetBtn.addEventListener('click', () => {
+  fileAObj = null; fileBObj = null;
+  fileA.value = ''; fileB.value = '';
+  nameA.textContent = ''; nameB.textContent = '';
+  uploadA.classList.remove('has-file');
+  uploadB.classList.remove('has-file');
+  [uploadA, uploadB].forEach(box => {
+    const thumb = box.querySelector('video.thumb');
+    if (thumb) thumb.remove();
+    const ol = box.querySelector('.overlay-label');
+    if (ol) ol.remove();
+    const ic = box.querySelector('.upload-icon'); if (ic) ic.style.display = '';
+    box.querySelector('.label').style.display = '';
+    box.querySelector('.filename').style.display = '';
+  });
+  checkReady();
+});
+
+compareBtn.addEventListener('click', startCompare);
+
+function startCompare() {
+  const urlA = URL.createObjectURL(fileAObj);
+  const urlB = URL.createObjectURL(fileBObj);
+  vidA.src = urlA;
+  vidB.src = urlB;
+  vidA2.src = urlA;
+  vidB2.src = urlB;
+  labelA.textContent = fileAObj.name;
+  labelB.textContent = fileBObj.name;
+
+  uploadScreen.style.display = 'none';
+  header.style.display = 'flex';
+  infoBar.style.display = 'flex';
+  controls.style.display = 'block';
+  zoom = 1; panX = 0; panY = 0;
+  sliderPos = 0.5;
+  updateTransform();
+  setMode('split');
+
+  // Wait for metadata
+  let loaded = 0;
+  const onMeta = () => {
+    loaded++;
+    if (loaded >= 2) {
+      updateInfoTags();
+      updateSlider();
+    }
+  };
+  vidA.addEventListener('loadedmetadata', onMeta, { once: true });
+  vidB.addEventListener('loadedmetadata', onMeta, { once: true });
+}
+
+function updateInfoTags() {
+  const extA = fileAObj.name.split('.').pop().toUpperCase();
+  const extB = fileBObj.name.split('.').pop().toUpperCase();
+  const resA = vidA.videoWidth ? `${vidA.videoWidth}x${vidA.videoHeight}` : '';
+  const resB = vidB.videoWidth ? `${vidB.videoWidth}x${vidB.videoHeight}` : '';
+  infoTagA.textContent = `${extA} ${resA}`;
+  infoTagB.textContent = `${extB} ${resB}`;
+}
+
+// View mode
+function setMode(m) {
+  mode = m;
+  if (mode === 'split') {
+    compareView.style.display = 'block';
+    sideBySide.style.display = 'none';
+    splitBtn.classList.add('active');
+    sideBtn.classList.remove('active');
+    syncVideos();
+  } else {
+    compareView.style.display = 'none';
+    sideBySide.style.display = 'flex';
+    splitBtn.classList.remove('active');
+    sideBtn.classList.add('active');
+    vidA2.currentTime = vidA.currentTime;
+    vidB2.currentTime = vidB.currentTime;
+    if (playing) { vidA2.play(); vidB2.play(); }
+  }
+}
+
+splitBtn.addEventListener('click', () => setMode('split'));
+sideBtn.addEventListener('click', () => setMode('side'));
+
+// Slider
+function updateSlider() {
+  const rect = compareView.getBoundingClientRect();
+  const x = rect.width * sliderPos;
+  sliderLine.style.left = x + 'px';
+  sliderHandle.style.left = x + 'px';
+  splitClip.style.clipPath = `inset(0 ${(1 - sliderPos) * 100}% 0 0)`;
+}
+
+function onSliderMove(clientX) {
+  const rect = compareView.getBoundingClientRect();
+  sliderPos = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  updateSlider();
+}
+
+sliderHandle.addEventListener('mousedown', (e) => { draggingSlider = true; e.preventDefault(); });
+sliderLine.addEventListener('mousedown', (e) => { draggingSlider = true; e.preventDefault(); });
+document.addEventListener('mousemove', (e) => {
+  if (draggingSlider) onSliderMove(e.clientX);
+});
+document.addEventListener('mouseup', () => { draggingSlider = false; });
+
+// Touch support for slider
+sliderHandle.addEventListener('touchstart', (e) => { draggingSlider = true; e.preventDefault(); });
+document.addEventListener('touchmove', (e) => {
+  if (draggingSlider) onSliderMove(e.touches[0].clientX);
+});
+document.addEventListener('touchend', () => { draggingSlider = false; });
+
+window.addEventListener('resize', () => { if (mode === 'split') updateSlider(); });
+
+// Play/Pause
+function togglePlay() {
+  if (playing) {
+    pause();
+  } else {
+    play();
+  }
+}
+
+function play() {
+  playing = true;
+  playPauseBtn.innerHTML = '&#9646;&#9646;';
+  if (mode === 'split') { vidA.play(); vidB.play(); }
+  else { vidA.play(); vidB.play(); vidA2.play(); vidB2.play(); }
+}
+
+function pause() {
+  playing = false;
+  playPauseBtn.innerHTML = '&#9654;&#65039;';
+  vidA.pause(); vidB.pause(); vidA2.pause(); vidB2.pause();
+}
+
+playPauseBtn.addEventListener('click', togglePlay);
+
+// Sync videos
+function syncVideos() {
+  if (mode === 'split') {
+    vidB.currentTime = vidA.currentTime;
+  }
+}
+
+// Time update
+vidA.addEventListener('timeupdate', () => {
+  const dur = Math.max(vidA.duration || 0, vidB.duration || 0);
+  if (!dur) return;
+  const cur = vidA.currentTime;
+  timelineProgress.style.width = (cur / dur * 100) + '%';
+  timeDisplay.textContent = `${fmt(cur)} / ${fmt(dur)}`;
+});
+
+vidA.addEventListener('ended', () => { pause(); });
+
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+// Timeline seek
+timeline.addEventListener('click', (e) => {
+  const rect = timeline.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  const dur = Math.max(vidA.duration || 0, vidB.duration || 0);
+  const t = pct * dur;
+  vidA.currentTime = t;
+  vidB.currentTime = t;
+  vidA2.currentTime = t;
+  vidB2.currentTime = t;
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'ArrowLeft') { seekRelative(-5); }
+  if (e.code === 'ArrowRight') { seekRelative(5); }
+});
+
+function seekRelative(dt) {
+  const t = Math.max(0, vidA.currentTime + dt);
+  vidA.currentTime = t;
+  vidB.currentTime = t;
+  vidA2.currentTime = t;
+  vidB2.currentTime = t;
+}
+
+// Zoom & Pan
+function updateTransform() {
+  const allVids = [vidA, vidB, vidA2, vidB2];
+  allVids.forEach(v => {
+    if (v === vidA2 || v === vidB2) {
+      v.style.transform = `scale(${zoom}) translate(${panX}px, ${panY}px)`;
+      v.style.transformOrigin = 'center center';
+    } else {
+      v.style.transform = `translate(-50%, -50%) scale(${zoom}) translate(${panX}px, ${panY}px)`;
+    }
+  });
+  compareView.classList.toggle('zoomed', zoom > 1);
+  zoomBadge.textContent = Math.round(zoom * 100) + '%';
+}
+
+function handleWheel(e) {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? 0.9 : 1.1;
+  zoom = Math.max(0.5, Math.min(10, zoom * delta));
+  updateTransform();
+}
+
+compareView.addEventListener('wheel', handleWheel, { passive: false });
+sideBySide.addEventListener('wheel', handleWheel, { passive: false });
+
+zoomBadge.addEventListener('click', () => {
+  if (zoom === 1) { zoom = 2; } else if (zoom === 2) { zoom = 3; } else { zoom = 1; panX = 0; panY = 0; }
+  updateTransform();
+});
+
+resetBtn.addEventListener('click', () => {
+  zoom = 1; panX = 0; panY = 0;
+  updateTransform();
+  sliderPos = 0.5;
+  updateSlider();
+});
+
+// Pan
+function startPan(e) {
+  if (draggingSlider) return;
+  if (e.target === sliderHandle || e.target === sliderLine) return;
+  if (zoom <= 1) return;
+  isPanning = true;
+  panStartX = e.clientX;
+  panStartY = e.clientY;
+  panStartPanX = panX;
+  panStartPanY = panY;
+  e.preventDefault();
+}
+
+compareView.addEventListener('mousedown', (e) => { startPan(e); compareView.classList.add('active-drag'); });
+sideBySide.addEventListener('mousedown', (e) => { startPan(e); });
+
+document.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  panX = panStartPanX + (e.clientX - panStartX) / zoom;
+  panY = panStartPanY + (e.clientY - panStartY) / zoom;
+  updateTransform();
+});
+
+document.addEventListener('mouseup', () => {
+  isPanning = false;
+  compareView.classList.remove('active-drag');
+});
+
+// Back button
+backBtn.addEventListener('click', () => {
+  pause();
+  vidA.src = ''; vidB.src = ''; vidA2.src = ''; vidB2.src = '';
+  uploadScreen.style.display = 'flex';
+  header.style.display = 'none';
+  compareView.style.display = 'none';
+  sideBySide.style.display = 'none';
+  controls.style.display = 'none';
+  infoBar.style.display = 'none';
+  zoom = 1; panX = 0; panY = 0;
+  sliderPos = 0.5;
+  checkReady();
+});
+
+// Keep videos synced
+setInterval(() => {
+  if (!playing) return;
+  if (mode === 'split') {
+    if (Math.abs(vidA.currentTime - vidB.currentTime) > 0.1) {
+      vidB.currentTime = vidA.currentTime;
+    }
+  } else {
+    if (Math.abs(vidA.currentTime - vidA2.currentTime) > 0.1) vidA2.currentTime = vidA.currentTime;
+    if (Math.abs(vidB.currentTime - vidB2.currentTime) > 0.1) vidB2.currentTime = vidB.currentTime;
+    if (Math.abs(vidA.currentTime - vidB.currentTime) > 0.1) {
+      vidB.currentTime = vidA.currentTime;
+      vidB2.currentTime = vidA.currentTime;
+    }
+  }
+}, 200);
+</script>
+</body>
+</html>
