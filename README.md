@@ -2,6 +2,8 @@
 
 A client-side video comparison tool. Drop two videos and compare them frame-by-frame using a split slider or side-by-side view — all in the browser, no uploads, no server.
 
+**[Live Demo](https://ai.tchung.org/compare-video/)**
+
 ## Features
 
 - **Split view** — draggable vertical slider reveals left/right video with a CSS clip-path overlay
