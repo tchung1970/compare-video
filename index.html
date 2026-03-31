@@ -369,11 +369,30 @@ function startCompare() {
     loaded++;
     if (loaded >= 2) {
       updateInfoTags();
+      sizeVideos();
       updateSlider();
     }
   };
   vidA.addEventListener('loadedmetadata', onMeta, { once: true });
   vidB.addEventListener('loadedmetadata', onMeta, { once: true });
+}
+
+function sizeVideos() {
+  // Use the larger resolution to determine display size, then fit to container
+  const container = compareView;
+  const cw = container.clientWidth;
+  const ch = container.clientHeight;
+  // Use max dimensions from both videos
+  const natW = Math.max(vidA.videoWidth || 0, vidB.videoWidth || 0);
+  const natH = Math.max(vidA.videoHeight || 0, vidB.videoHeight || 0);
+  if (!natW || !natH) return;
+  const scale = Math.min(cw / natW, ch / natH);
+  const w = Math.round(natW * scale);
+  const h = Math.round(natH * scale);
+  [vidA, vidB, vidA2, vidB2].forEach(v => {
+    v.style.width = w + 'px';
+    v.style.height = h + 'px';
+  });
 }
 
 function updateInfoTags() {
@@ -437,7 +456,7 @@ document.addEventListener('touchmove', (e) => {
 });
 document.addEventListener('touchend', () => { draggingSlider = false; });
 
-window.addEventListener('resize', () => { if (mode === 'split') updateSlider(); });
+window.addEventListener('resize', () => { sizeVideos(); if (mode === 'split') updateSlider(); });
 
 // Play/Pause
 function togglePlay() {
@@ -583,6 +602,7 @@ document.addEventListener('mouseup', () => {
 backBtn.addEventListener('click', () => {
   pause();
   vidA.src = ''; vidB.src = ''; vidA2.src = ''; vidB2.src = '';
+  [vidA, vidB, vidA2, vidB2].forEach(v => { v.style.width = ''; v.style.height = ''; });
   uploadScreen.style.display = 'flex';
   header.style.display = 'none';
   compareView.style.display = 'none';
