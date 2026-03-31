@@ -13,6 +13,8 @@ https://ai.tchung.org/compare-video/
 - **Synced playback** — videos stay in sync with automatic drift correction (200ms interval)
 - **Zoom & pan** — scroll to zoom or click the badge to cycle 100%/200%/300%, click-drag to pan when zoomed in
 - **Keyboard shortcuts** — Space (play/pause), Left/Right arrows (±5s seek)
+- **Adaptive thumbnails** — upload boxes resize to match video aspect ratio (portrait or landscape)
+- **Multi-resolution support** — videos with different resolutions align correctly in split view
 - **Drag and drop** — drop files on specific boxes or anywhere on the upload screen
 - **Fully local** — uses `URL.createObjectURL`, nothing leaves your machine
 
