@@ -28,7 +28,7 @@ body { background: #1a1d2e; color: #fff; font-family: -apple-system, BlinkMacSys
 .upload-screen h2 { font-size: 42px; font-weight: 800; color: rgba(255,255,255,0.95); letter-spacing: 4px; text-transform: uppercase; }
 .upload-card { background: rgba(100,120,180,0.08); border: 1px solid rgba(100,120,180,0.2); border-radius: 20px; padding: 24px; display: flex; gap: 20px; }
 .upload-row { display: flex; gap: 20px; }
-.upload-box { width: 250px; height: 400px; border: 2px dashed rgba(100,120,180,0.3); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; background: rgba(100,120,180,0.06); }
+.upload-box { width: 250px; height: 260px; border: 2px dashed rgba(100,120,180,0.3); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; background: rgba(100,120,180,0.06); }
 .upload-box:hover { border-color: rgba(100,120,180,0.5); background: rgba(100,120,180,0.1); }
 .upload-box.dragover { border-color: rgba(120,140,255,0.5); background: rgba(120,140,255,0.08); }
 .upload-box.has-file { border-color: rgba(120,140,255,0.4); border-style: solid; }
@@ -233,10 +233,37 @@ function showThumbnail(box, file) {
   }
   thumb.src = URL.createObjectURL(file);
   thumb.currentTime = 0.5;
+  thumb.addEventListener('loadedmetadata', () => {
+    box.dataset.natW = thumb.videoWidth;
+    box.dataset.natH = thumb.videoHeight;
+    normalizeUploadBoxes();
+  }, { once: true });
   box.querySelector('.overlay-label').textContent = file.name;
   const ic = box.querySelector('.upload-icon'); if (ic) ic.style.display = 'none';
   box.querySelector('.label').style.display = 'none';
   box.querySelector('.filename').style.display = 'none';
+}
+
+function normalizeUploadBoxes() {
+  const boxes = [uploadA, uploadB];
+  const ratios = boxes.map(b => b.dataset.natW && b.dataset.natH ? b.dataset.natW / b.dataset.natH : null).filter(r => r !== null);
+  if (ratios.length === 0) return;
+  const ratio = Math.max(...ratios);
+  const maxW = 480, maxH = 400, minW = 200, minH = 160;
+  let w, h;
+  if (ratio >= 1) {
+    w = maxW;
+    h = Math.round(w / ratio);
+    if (h < minH) { h = minH; w = Math.round(h * ratio); }
+  } else {
+    h = maxH;
+    w = Math.round(h * ratio);
+    if (w < minW) { w = minW; h = Math.round(w / ratio); }
+  }
+  boxes.forEach(b => {
+    b.style.width = w + 'px';
+    b.style.height = h + 'px';
+  });
 }
 
 function handleFileA(file) {
@@ -307,6 +334,10 @@ uploadResetBtn.addEventListener('click', () => {
     const ic = box.querySelector('.upload-icon'); if (ic) ic.style.display = '';
     box.querySelector('.label').style.display = '';
     box.querySelector('.filename').style.display = '';
+    delete box.dataset.natW;
+    delete box.dataset.natH;
+    box.style.width = '';
+    box.style.height = '';
   });
   checkReady();
 });
